@@ -29,7 +29,38 @@
  *
  * @return 0 if succeed. Otherwise, returns the appropriate AVERROR.
  */
-int ff_parse_itu_t_t35_to_dynamic_hdr10_plus(AVDynamicHDRPlus *s, const uint8_t *data,
-                                             int size);
+int ff_parse_itu_t_t35_to_dynamic_hdr10_plus(AVDynamicHDRPlus* s, const uint8_t* data,
+					     int size);
+
+/**
+ * Parse the user data registered ITU-T T.35 with header to AVDynamicHDRPlus. At first check
+ * the header if the provider code is SMPTE-2094-40. Then will parse the data to AVDynamicHDRPlus.
+ * @param s A pointer containing the decoded AVDynamicHDRPlus structure.
+ * @param data The byte array containing the raw ITU-T T.35 data with header.
+ * @param size Size of the data array in bytes.
+ *
+ * @return 0 if succeed. Otherwise, returns the appropriate AVERROR.
+ */
+int ff_parse_full_itu_t_t35_to_dynamic_hdr10_plus(AVDynamicHDRPlus* s, const uint8_t* data,
+					     int size);
+
+/**
+ * Get the size of buffer required to save the encoded bit stream of
+ * AVDynamicHDRPlus in the form of the user data registered ITU-T T.35.
+ * @param s The AVDynamicHDRPlus structure.
+ *
+ * @return The size of bit stream required for encoding. 0 if the data is invalid.
+ */
+int ff_itu_t_t35_buffer_size(const AVDynamicHDRPlus* s);
+
+/**
+ * Encode and write AVDynamicHDRPlus to the user data registered ITU-T T.3 with header (containing the provider code).
+ * @param s A pointer containing the AVDynamicHDRPlus structure.
+ * @param data The byte array containing the raw ITU-T T.35 data with header.
+ * @param size The size of the raw ITU-T T.35 data.
+ *
+ * @return 0 if succeed. Otherwise, returns the appropriate AVERROR.
+ */
+int ff_write_dynamic_hdr10_plus_to_full_itu_t_t35(const AVDynamicHDRPlus* s, uint8_t** data, size_t* size);
 
 #endif /* AVCODEC_DYNAMIC_HDR10_PLUS_H */

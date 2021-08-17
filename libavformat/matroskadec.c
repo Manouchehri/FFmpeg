@@ -47,6 +47,7 @@
 #include "libavutil/spherical.h"
 
 #include "libavcodec/bytestream.h"
+#include "libavcodec/dynamic_hdr10_plus.h"
 #include "libavcodec/flac.h"
 #include "libavcodec/mpeg4audio.h"
 #include "libavcodec/packet_internal.h"
@@ -3533,15 +3534,28 @@ static int matroska_parse_frame(MatroskaDemuxContext *matroska,
     pkt->stream_index = st->index;
 
     if (additional_size > 0) {
-        uint8_t *side_data = av_packet_new_side_data(pkt,
-                                                     AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL,
-                                                     additional_size + 8);
-        if (!side_data) {
-            av_packet_unref(pkt);
-            return AVERROR(ENOMEM);
+        if (additional_id == MATROSKA_BLOCK_ADD_ID_DYNAMIC_HDR10_PLUS) {
+            AVDynamicHDRPlus hdr10_plus;
+            if (!ff_parse_full_itu_t_t35_to_dynamic_hdr10_plus(&hdr10_plus, additional, additional_size)) {
+                uint8_t *side_data = av_packet_new_side_data(pkt, AV_PKT_DATA_DYNAMIC_HDR10_PLUS, sizeof(hdr10_plus));
+                if (!side_data) {
+                    av_packet_unref(pkt);
+                    av_free(pkt);
+                    return AVERROR(ENOMEM);
+                }
+                memcpy(side_data, (uint8_t*)(&hdr10_plus), sizeof(hdr10_plus));
+                }
+	} else {
+	    uint8_t *side_data = av_packet_new_side_data(pkt,
+                                                         AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL,
+                                                         additional_size + 8);
+            if (!side_data) {
+                av_packet_unref(pkt);
+                return AVERROR(ENOMEM);
+            }
+            AV_WB64(side_data, additional_id);
+            memcpy(side_data + 8, additional, additional_size);
         }
-        AV_WB64(side_data, additional_id);
-        memcpy(side_data + 8, additional, additional_size);
     }
 
     if (discard_padding) {

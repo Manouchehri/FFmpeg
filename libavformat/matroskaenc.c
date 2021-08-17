@@ -51,6 +51,7 @@
 #include "libavutil/samplefmt.h"
 #include "libavutil/stereo3d.h"
 
+#include "libavcodec/dynamic_hdr10_plus.h"
 #include "libavcodec/xiph.h"
 #include "libavcodec/mpeg4audio.h"
 
@@ -2026,14 +2027,15 @@ static int mkv_write_block(AVFormatContext *s, AVIOContext *pb,
     MatroskaMuxContext *mkv = s->priv_data;
     AVCodecParameters *par = s->streams[pkt->stream_index]->codecpar;
     mkv_track *track = &mkv->tracks[pkt->stream_index];
-    uint8_t *data = NULL, *side_data = NULL;
-    size_t side_data_size;
+    uint8_t *data = NULL, *side_data = NULL, *hdr10_plus_itu_t_t35 = NULL;
+    size_t side_data_size, hdr10_plus_itu_t_t35_size = 0;
     int err = 0, offset = 0, size = pkt->size;
     int64_t ts = track->write_dts ? pkt->dts : pkt->pts;
     uint64_t additional_id;
     int64_t discard_padding = 0;
     unsigned track_number = track->track_num;
     ebml_master block_group, block_additions, block_more;
+    int use_blockgroup = 0;
 
     ts += track->ts_offset;
 
@@ -2081,13 +2083,18 @@ static int mkv_write_block(AVFormatContext *s, AVIOContext *pb,
                                        (AVRational){1, par->sample_rate},
                                        (AVRational){1, 1000000000});
     }
-
     side_data = av_packet_get_side_data(pkt,
+                                        AV_PKT_DATA_DYNAMIC_HDR10_PLUS,
+                                        &side_data_size);
+    if (side_data && side_data_size > 0)
+        ff_write_dynamic_hdr10_plus_to_full_itu_t_t35((AVDynamicHDRPlus*)side_data, &hdr10_plus_itu_t_t35, &hdr10_plus_itu_t_t35_size);
+
+  side_data = av_packet_get_side_data(pkt,
                                         AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL,
                                         &side_data_size);
     if (side_data) {
-        // Only the Codec-specific BlockMore (id == 1) is currently supported.
-        if (side_data_size < 8 || (additional_id = AV_RB64(side_data)) != 1) {
+        // Only the Codec-specific BlockMore (id == 1) and HDR10+ BlockMore (id == 4) are currently supported.
+        if (side_data_size < 8 || (additional_id = AV_RB64(side_data)) != 1 || !hdr10_plus_itu_t_t35_size) {
             side_data_size = 0;
         } else {
             side_data      += 8;
@@ -2095,7 +2102,8 @@ static int mkv_write_block(AVFormatContext *s, AVIOContext *pb,
         }
     }
 
-    if (side_data_size || discard_padding) {
+    use_blockgroup = hdr10_plus_itu_t_t35_size || side_data_size || discard_padding;
+    if (use_blockgroup) {
         block_group = start_ebml_master(pb, MATROSKA_ID_BLOCKGROUP, 0);
         blockid = MATROSKA_ID_BLOCK;
     }
@@ -2116,18 +2124,27 @@ static int mkv_write_block(AVFormatContext *s, AVIOContext *pb,
     if (discard_padding)
         put_ebml_sint(pb, MATROSKA_ID_DISCARDPADDING, discard_padding);
 
-    if (side_data_size) {
+    if (side_data_size || hdr10_plus_itu_t_t35_size) {
         block_additions = start_ebml_master(pb, MATROSKA_ID_BLOCKADDITIONS, 0);
-        block_more = start_ebml_master(pb, MATROSKA_ID_BLOCKMORE, 0);
-        /* Until dbc50f8a our demuxer used a wrong default value
-         * of BlockAddID, so we write it unconditionally. */
-        put_ebml_uint  (pb, MATROSKA_ID_BLOCKADDID, additional_id);
-        put_ebml_binary(pb, MATROSKA_ID_BLOCKADDITIONAL,
-                        side_data, side_data_size);
-        end_ebml_master(pb, block_more);
+        if (side_data_size) {
+            block_more = start_ebml_master(pb, MATROSKA_ID_BLOCKMORE, 0);
+            /* Until dbc50f8a our demuxer used a wrong default value
+             * of BlockAddID, so we write it unconditionally. */
+            put_ebml_uint  (pb, MATROSKA_ID_BLOCKADDID, additional_id);
+            put_ebml_binary(pb, MATROSKA_ID_BLOCKADDITIONAL,
+                            side_data, side_data_size);
+            end_ebml_master(pb, block_more);
+        }
+        if(hdr10_plus_itu_t_t35_size) {
+            block_more = start_ebml_master(pb, MATROSKA_ID_BLOCKMORE, 0);
+            put_ebml_uint(pb, MATROSKA_ID_BLOCKADDID, MATROSKA_BLOCK_ADD_ID_DYNAMIC_HDR10_PLUS);
+            put_ebml_binary(pb, MATROSKA_ID_BLOCKADDITIONAL,
+                            hdr10_plus_itu_t_t35, hdr10_plus_itu_t_t35_size);
+            end_ebml_master(pb, block_more);
+        }
         end_ebml_master(pb, block_additions);
     }
-    if (side_data_size || discard_padding)
+    if (use_blockgroup)
         end_ebml_master(pb, block_group);
 
     return 0;

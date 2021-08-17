@@ -75,6 +75,12 @@ FATE_MATROSKA_FFMPEG_FFPROBE-$(call ALLYES, MATROSKA_DEMUXER MATROSKA_MUXER \
                                += fate-matroska-spherical-mono-remux
 fate-matroska-spherical-mono-remux: CMD = transcode matroska $(TARGET_SAMPLES)/mkv/spherical.mkv matroska "-map 0 -map 0 -c copy -disposition:0 -default+forced -disposition:1 -default -default_mode passthrough -color_primaries:1 bt709 -color_trc:1 smpte170m -colorspace:1 bt2020c -color_range:1 pc"  "-map 0 -c copy -t 0" "" "-show_entries stream_side_data_list:stream_disposition=default,forced:stream=color_range,color_space,color_primaries,color_transfer"
 
+# The input file of the following test contains HDR10+ metadata and so this
+# test tests correct encoding and decoding HDR10+ for VP9/MKV.
+FATE_MATROSKA_FFMPEG_FFPROBE-$(call ALLYES, MATROSKA_DEMUXER MATROSKA_MUXER) \
+                               += fate-matroska-hdr10-plus-metadata
+fate-matroska-hdr10-plus-metadata: CMD = transcode matroska $(TARGET_SAMPLES)/mkv/hdr10_plus_vp9_sample.mkv matroska "-map 0 -map 0 -c copy -pixel_format yuv420p10le" "" "" "-show_frames"
+
 # The input file of the following test contains Content Light Level as well as
 # Mastering Display Metadata and so this test tests correct muxing and demuxing
 # of these. It furthermore also tests that this data is correctly propagated
