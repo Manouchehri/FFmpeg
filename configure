@@ -2397,6 +2397,7 @@ CONFIG_EXTRA="
     dirac_parse
     dnn
     dvprofile
+    dynamic_hdr10_plus
     exif
     faandct
     faanidct
@@ -3368,9 +3369,9 @@ ismv_muxer_select="mov_muxer"
 ivf_muxer_select="av1_metadata_bsf vp9_superframe_bsf"
 latm_muxer_select="aac_adtstoasc_bsf"
 matroska_audio_muxer_select="matroska_muxer"
-matroska_demuxer_select="riffdec"
+matroska_demuxer_select="riffdec dynamic_hdr10_plus"
 matroska_demuxer_suggest="bzlib lzo zlib"
-matroska_muxer_select="riffenc vp9_superframe_bsf aac_adtstoasc_bsf"
+matroska_muxer_select="riffenc vp9_superframe_bsf aac_adtstoasc_bsf dynamic_hdr10_plus"
 mlp_demuxer_select="mlp_parser"
 mmf_muxer_select="riffenc"
 mov_demuxer_select="iso_media riffdec"
