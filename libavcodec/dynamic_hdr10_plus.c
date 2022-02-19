@@ -190,7 +190,7 @@ int ff_parse_itu_t_t35_to_dynamic_hdr10_plus(AVDynamicHDRPlus* s, const uint8_t*
     return 0;
 }
 
-extern const int ff_parse_full_itu_t_t35_to_dynamic_hdr10_plus(AVDynamicHDRPlus* s, const uint8_t* data,
+static const int ff_parse_full_itu_t_t35_to_dynamic_hdr10_plus(AVDynamicHDRPlus* s, const uint8_t* data,
 					     int size)
 {
     uint8_t country_code;
@@ -285,7 +285,7 @@ int ff_itu_t_t35_buffer_size(const AVDynamicHDRPlus* s)
     return size;
 }
 
-extern const int ff_write_dynamic_hdr10_plus_to_full_itu_t_t35(const AVDynamicHDRPlus* s, uint8_t** data, size_t* size)
+static const int ff_write_dynamic_hdr10_plus_to_full_itu_t_t35(const AVDynamicHDRPlus* s, uint8_t** data, size_t* size)
 {
     int w, i, j;
     PutBitContext pbc, *pb = &pbc;
