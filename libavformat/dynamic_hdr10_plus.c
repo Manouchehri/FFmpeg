@@ -17,8 +17,8 @@
  */
 
 #include "dynamic_hdr10_plus.h"
-#include "get_bits.h"
-#include "put_bits.h"
+#include "libavcodec/get_bits.h"
+#include "libavcodec/put_bits.h"
 
 static const uint8_t usa_country_code = 0xB5;
 static const uint16_t smpte_provider_code = 0x003C;
